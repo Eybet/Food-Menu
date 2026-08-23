@@ -192,8 +192,14 @@ const App = () => {
       {scene}
       {ambient}
 
+      {/* Pas de `backdrop-filter` sur la colonne : il enveloppait toute la
+          scene, donc TOUT le carrousel. Un backdrop-filter est recalcule des
+          que quoi que ce soit bouge derriere ou dedans — pendant un geste,
+          c'est a chaque image, sur la surface entiere. Ce qu'il floutait ici
+          n'est qu'un degrade lisse plus un grain a 0,035 d'opacite : le rendu
+          est indiscernable sans lui. */}
       <div
-        className="relative mx-auto flex h-[100dvh]  flex-col justify-between overflow-hidden  backdrop-blur-[2px]"
+        className="relative mx-auto flex h-[100dvh]  flex-col justify-between overflow-hidden"
         style={{
           boxShadow: '0 0 80px rgba(0,0,0,0.6)',
           borderInline: '1px solid rgba(255,255,255,0.06)',
@@ -202,7 +208,10 @@ const App = () => {
         
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-accent/10 blur-3xl"
+          className="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 rounded-full bg-accent/10 blur-3xl"
+          // tout element porteur d'un `filter` doit porter une transformation
+          // 3D sur LE MEME element, sinon Safari le rastérise sur le CPU.
+          style={{ transform: 'translateX(-50%) translateZ(0)' }}
         />
 
         <Header />

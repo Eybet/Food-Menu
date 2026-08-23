@@ -57,21 +57,13 @@
     }
   }
 
+  /* La carte garde exactement la meme geometrie a tous les paliers : bordure
+     de 2px transparente, meme rayon. Seul le remplissage de cette bordure
+     change (voir .card-depth-0 .card dans @layer components). */
   .card {
     border: 2px solid transparent;
     border-radius: 24px;
-    background:
-      linear-gradient(#010305, #010305) padding-box,
-      linear-gradient(
-          180deg,
-          #001c2a 0%,
-          #001e26 20%,
-          #0b2022 35%,
-          #291a14 48%,
-          #351707 65%,
-          #321506 100%
-        )
-        border-box;
+    background: linear-gradient(#010305, #010305) padding-box;
   }
 
   html,
@@ -240,12 +232,52 @@
     aspect-ratio: 13 / 18;
   }
 
+  /* ── Bordure degradee + ombre portee : CARTE ACTIVE UNIQUEMENT ────
+     Une bordure en degrade est un fond `border-box` masque par le
+     `padding-box` : le moteur doit composer la carte hors ecran pour la
+     produire. Une `box-shadow` de grand rayon, elle, se repeint des que
+     l'element bouge. Les deux, sur quatre a cinq cartes qui suivent le doigt,
+     etaient payes a chaque image.
+     Les cartes de l'arriere-plan sont floutees (4 a 9px) ET voilees jusqu'a
+     0,66 d'opacite : ni la bordure ni l'ombre n'y sont discernables. On ne les
+     peint donc que sur la carte de devant, ou elles se voient reellement. */
+  .card-depth-0 .card {
+    background:
+      linear-gradient(#010305, #010305) padding-box,
+      linear-gradient(
+          180deg,
+          #001c2a 0%,
+          #001e26 20%,
+          #0b2022 35%,
+          #291a14 48%,
+          #351707 65%,
+          #321506 100%
+        )
+        border-box;
+    box-shadow:
+      0 18px 40px rgba(0, 0, 0, 0.55),
+      0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
   /* ── Paliers de profondeur ────────────────────────────────────────
      Le flou est FIXE par palier et ne change qu'au changement d'index :
      jamais pendant le geste. `filter: blur()` interpolé image par image
      était le premier poste de coût du swipe (recalcul GPU à chaque
      trame, non compositable) ; en paliers, l'écart visuel est
      imperceptible et le coût par image tombe à zéro. */
+  /**
+   * `translate3d` de repos — filet de securite, jamais un effet visuel.
+   *
+   * Safari rastérise un element floute sur le CPU tant qu'aucune
+   * transformation 3D ne le promeut en couche GPU. Pendant le geste, Motion
+   * ecrit lui-meme un `translate3d(...)` en style inline (voir ProductCard) ;
+   * cette regle couvre le premier rendu et le repos, pour qu'aucune image ne
+   * soit jamais peinte avec un flou sans couche.
+   */
+  .card-depth {
+    transform: translateZ(0);
+  }
+
   .card-depth-0 {
     filter: none;
   }

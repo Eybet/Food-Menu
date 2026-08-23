@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import { motion, useTransform } from 'framer-motion';
+import { motion, useMotionTemplate, useTransform } from 'framer-motion';
 import { FAN } from '../hooks/useSwipe';
 import PricePill from './PricePill';
 import Numerals from './Numerals';
@@ -48,11 +48,40 @@ const ProductCardBase = ({
 
   // progress continu : suit le doigt en temps réel, sans re-render.
   const progress = useTransform(dragProgress, (d) => offset - d);
-  const rotate = useTransform(progress, (p) => p * FAN.ROTATE);
-  // Décalages proportionnels à la carte : le fan rétrécit avec elle.
-  const x = useTransform(progress, (p) => p * cardSize.w * xRatio);
-  const y = useTransform(progress, (p) => Math.abs(p) * cardSize.h * FAN.Y_RATIO);
+
+  /**
+   * ─── CHEMIN CHAUD : une seule chaîne `transform`, jamais x/y/rotate/scale ──
+   *
+   * Motion sait animer les transformations individuelles (`x`, `scale`…), et
+   * c'est la bonne façon de faire PARTOUT AILLEURS dans cette application.
+   * Mais il les implémente avec des variables CSS assemblées dans un
+   * `transform: translateX(var(--x)) …`. Une variable CSS n'est pas
+   * compositable : elle oblige le moteur à refaire un calcul de style sur le
+   * fil principal à chaque image, au lieu de remettre la transformation au
+   * compositeur. La documentation de performance de Motion le dit noir sur
+   * blanc et recommande la propriété `transform` complète « pour les scénarios
+   * de performance critiques ». Un glissement au doigt sur un téléphone est
+   * exactement ce scénario : on compose donc la chaîne nous-mêmes.
+   *
+   * `translate3d(…, 0)` et non `translateX(…)` : le composant Z force la
+   * promotion en couche GPU. C'est ce qui fait basculer `filter: blur()` des
+   * paliers de profondeur d'un tramage CPU (comportement documenté de Safari)
+   * vers une composition GPU — sans lui, Safari rastérise quatre grandes
+   * cartes floutées sur le fil principal, à chaque image du geste.
+   *
+   * Seule `opacity` reste à part : elle est nativement compositable et ne
+   * passe pas par une variable CSS.
+   */
+  const m = reduceMotion ? 0 : 1;
+  const tx = useTransform(progress, (p) => p * cardSize.w * xRatio * m);
+  const ty = useTransform(
+    progress,
+    (p) => Math.abs(p) * cardSize.h * FAN.Y_RATIO * m,
+  );
+  const rot = useTransform(progress, (p) => p * FAN.ROTATE * m);
   const scale = useTransform(progress, (p) => 1 - Math.abs(p) * FAN.SCALE);
+  const transform = useMotionTemplate`translate3d(${tx}px, ${ty}px, 0) rotate(${rot}deg) scale(${scale})`;
+
   const opacity = useTransform(progress, (p) =>
     Math.max(1 - Math.abs(p) * FAN.OPACITY, 0),
   );
@@ -80,10 +109,7 @@ const ProductCardBase = ({
       className={`absolute inset-0 ${depthClass(offset)}`}
       data-blur-scale={blurScale}
       style={{
-        rotate: reduceMotion ? 0 : rotate,
-        x: reduceMotion ? 0 : x,
-        y: reduceMotion ? 0 : y,
-        scale,
+        transform,
         opacity,
         zIndex,
         transformOrigin: FAN.ORIGIN,
@@ -119,7 +145,7 @@ const ProductCardBase = ({
           disabled={!isActive || sold}
           tabIndex={isActive && !sold ? 0 : -1}
           onDragStart={(e) => e.preventDefault()}
-          className={`card group relative block h-full w-full overflow-hidden rounded-3xl bg-surface text-left shadow-card ring-1 ring-white/10 ${
+          className={`card group relative block h-full w-full overflow-hidden rounded-3xl bg-surface text-left ring-1 ring-white/10 ${
             sold ? 'cursor-default' : 'cursor-pointer'
           }`}
         >
