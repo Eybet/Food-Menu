@@ -58,18 +58,18 @@
   }
 
   .card {
-    border: 1px solid transparent;
+    border: 2px solid transparent;
     border-radius: 24px;
     background:
-      linear-gradient(#071522, #071522) padding-box,
+      linear-gradient(#010305, #010305) padding-box,
       linear-gradient(
           180deg,
-          #008bcb 0%,
-          #0089b8 20%,
-          #2e8c99 35%,
-          #c98256 48%,
-          #e6651e 65%,
-          #e85f16 100%
+          #001c2a 0%,
+          #001e26 20%,
+          #0b2022 35%,
+          #291a14 48%,
+          #351707 65%,
+          #321506 100%
         )
         border-box;
   }
@@ -154,6 +154,14 @@
     touch-action: manipulation;
   }
 
+  /* ...sauf dans la rangee de categories : `manipulation` y reautoriserait le
+     defilement vertical de la page depuis une pastille, ce que `pan-x` sur le
+     parent vient justement d'interdire. Les pastilles heritent donc de la
+     rangee. */
+  .category-row button {
+    touch-action: inherit;
+  }
+
   /* ── Aucune sélection native sur les surfaces qu'on fait glisser ──────
      Sans ça, iOS Safari interprète un swipe sur les pastilles comme une
      sélection de texte : le mot part en blanc sur bleu et le surlignage
@@ -197,9 +205,18 @@
      d'être tranchés, ce qui signale aussi que la rangée défile. */
   .category-row {
     scroll-padding-inline: 20px;
+    /* Gestes horizontaux, et rien d'autre.
+       Un glissement vertical parti de la rangee etait transmis a la page : elle
+       montait et descendait, et pouvait rester decalee/zoomee, en-tete et
+       pastilles agrandis puis rognes. `pan-x` indique au navigateur qu'un
+       toucher ne dessus ne peut que filer a l'horizontale : le vertical est
+       ignore net au lieu d'etre repasse a la page, et le zoom par double tape
+       sur une pastille tombe avec (effet de bord voulu). */
+    touch-action: pan-x;
     /* Une chiquenaude horizontale dans la rangée ne peut jamais se propager
        à la page : plus de vide à droite ni d'en-tête qui sort du cadre. */
     overscroll-behavior-x: contain;
+    overscroll-behavior-y: none;
     -webkit-mask-image: linear-gradient(
       to right,
       transparent 0,

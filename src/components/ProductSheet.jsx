@@ -124,7 +124,7 @@ const ProductSheet = ({ product, onClose }) => {
                 sinon sous la barre d'outils de Safari, voire entierement sous
                 la ligne de flottaison sur une fiche a longue liste. */}
             <div
-              className="shrink-0 border-t border-white/8 bg-surface px-5 pt-3"
+              className="shrink-0  bg-surface px-5 pt-5"
               style={{ paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
             >
               <p className="rounded-2xl border border-white/8 bg-surface-2 px-4 py-3.5 text-center text-sm text-muted">
