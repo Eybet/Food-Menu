@@ -21,9 +21,9 @@ export default {
         'surface-2': '#1A2029', // creux, réserve d'image
         text: '#ECF1F5', //        17.0:1 sur bg
         muted: '#94A3B8', //       7.5:1 sur bg  → classe `text-muted`
-        accent: '#22B8CF', //      8.1:1 sur bg  — accent unique
-        'accent-fg': '#04141A', // 7.9:1 sur accent — texte posé sur l'accent
-        'accent-deep': '#0891B2', // même famille, pour dégradés et halos
+        accent: '#00DFFB', //      8.1:1 sur bg  — accent unique
+        'accent-fg': '#06141D', // 7.9:1 sur accent — texte posé sur l'accent
+        'accent-deep': '#009DCC', // même famille, pour dégradés et halos
         support: '#A78BFA', //     7.1:1 sur bg  — couleur d'appui unique
         border: 'rgba(255,255,255,0.08)',
         danger: '#F87171', //      6.6:1 sur surface — état « épicé » / rupture

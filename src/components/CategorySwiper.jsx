@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 /**
@@ -12,35 +12,96 @@ const CategorySwiper = ({ categories, activeId, onSelect, variant = 'row' }) => 
   const rail = variant === 'rail';
   const activeIndex = categories.findIndex((c) => c.id === activeId);
 
-  // Recentre l'entrée active, y compris quand le changement vient du carrousel
-  // (swipe au-delà de la dernière carte). Dans un rAF : lancé pendant le rendu,
-  // le défilement viserait une position que le layout n'a pas encore figée
-  // (largeur des pastilles, scale 1.06) et la pastille resterait tronquée.
+  // Recentre l'entree active, y compris quand le changement vient du carrousel
+  // (swipe au-dela de la derniere carte).
   //
-  // Surtout : on ne passe JAMAIS par scrollIntoView, qui fait défiler tous les
-  // ancêtres scrollables — document compris. La dernière pastille ne pouvant
-  // pas être centrée dans la rangée, le navigateur satisfaisait `inline:center`
-  // en décalant la page : d'où le vide à droite et l'en-tête qui sortait du
-  // cadre. On pilote donc uniquement le scroll de la rangée, borné à ses
-  // limites réelles : première et dernière pastille se posent contre leur bord.
-  useEffect(() => {
-    const row = rowRef.current;
-    const pill = pillRefs.current[activeIndex];
-    if (!row || !pill) return;
+  // On ne passe JAMAIS par scrollIntoView, qui fait defiler tous les ancetres
+  // scrollables — document compris. La derniere pastille ne pouvant pas etre
+  // centree dans la rangee, le navigateur satisfaisait `inline:center` en
+  // decalant la page : d'ou le vide a droite et l'en-tete qui sortait du
+  // cadre. On pilote donc uniquement le scroll de la rangee, borne a ses
+  // limites reelles : premiere et derniere pastille se posent contre leur bord.
+  const centreActivePill = useCallback(
+    (behavior = 'smooth') => {
+      const row = rowRef.current;
+      const pill = pillRefs.current[activeIndex];
+      if (!row || !pill) return;
 
-    const id = requestAnimationFrame(() => {
       if (rail) {
         const target = pill.offsetTop - (row.clientHeight - pill.offsetHeight) / 2;
         const max = row.scrollHeight - row.clientHeight;
-        row.scrollTo({ top: Math.max(0, Math.min(target, max)), behavior: 'smooth' });
+        row.scrollTo({ top: Math.max(0, Math.min(target, max)), behavior });
       } else {
         const target = pill.offsetLeft - (row.clientWidth - pill.offsetWidth) / 2;
         const max = row.scrollWidth - row.clientWidth;
-        row.scrollTo({ left: Math.max(0, Math.min(target, max)), behavior: 'smooth' });
+        row.scrollTo({ left: Math.max(0, Math.min(target, max)), behavior });
       }
-    });
+    },
+    [activeIndex, rail],
+  );
+
+  // Changement de categorie -> on recentre. Dans un rAF : lance pendant le
+  // rendu, le defilement viserait une position que le layout n'a pas encore
+  // figee (largeur des pastilles, scale 1.06) et la pastille resterait
+  // tronquee.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => centreActivePill());
     return () => cancelAnimationFrame(id);
-  }, [activeIndex, rail]);
+  }, [centreActivePill]);
+
+  /**
+   * Rappel de la pastille active.
+   *
+   * Recentrer au seul changement d'index ne suffisait pas : des que le client
+   * faisait defiler la rangee a la main, plus rien ne ramenait jamais la
+   * pastille active, qui finissait hors champ — on lisait « Grillades ·
+   * Desserts · Boissons » sans aucun repere alors que le carrousel montrait
+   * des pizzas.
+   *
+   * On attend donc la fin du defilement propre a la rangee (450 ms apres le
+   * dernier evenement, pour ne jamais contrarier le doigt en plein geste) et,
+   * si la pastille n'est plus entierement visible, on la ramene au centre avec
+   * le meme scrollTo borne.
+   */
+  const settleRef = useRef(0);
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return undefined;
+
+    const onRowScroll = () => {
+      clearTimeout(settleRef.current);
+      settleRef.current = setTimeout(() => {
+        const view = rowRef.current;
+        const pill = pillRefs.current[activeIndex];
+        if (!view || !pill) return;
+        const fullyVisible = rail
+          ? pill.offsetTop - view.scrollTop >= 0 &&
+            pill.offsetTop - view.scrollTop + pill.offsetHeight <= view.clientHeight
+          : pill.offsetLeft - view.scrollLeft >= 0 &&
+            pill.offsetLeft - view.scrollLeft + pill.offsetWidth <= view.clientWidth;
+        if (!fullyVisible) centreActivePill();
+      }, 450);
+    };
+
+    row.addEventListener('scroll', onRowScroll, { passive: true });
+    return () => {
+      clearTimeout(settleRef.current);
+      row.removeEventListener('scroll', onRowScroll);
+    };
+  }, [activeIndex, rail, centreActivePill]);
+
+  // Rotation ou redimensionnement : la rangee change de largeur, la pastille
+  // active peut se retrouver hors cadre sans qu'aucun scroll n'ait eu lieu.
+  useEffect(() => {
+    const recentre = () => centreActivePill('auto');
+    window.addEventListener('resize', recentre);
+    window.addEventListener('orientationchange', recentre);
+    return () => {
+      window.removeEventListener('resize', recentre);
+      window.removeEventListener('orientationchange', recentre);
+    };
+  }, [centreActivePill]);
 
   if (rail) {
     return (

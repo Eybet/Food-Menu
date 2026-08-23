@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Header from './components/Header';
 import CategorySwiper from './components/CategorySwiper';
@@ -15,6 +15,24 @@ const App = () => {
   const [selected, setSelected] = useState(null);
   const [activeProduct, setActiveProduct] = useState(categories[0].products[0] ?? null);
   const carouselRef = useRef(null);
+
+  /**
+   * Portrait : la page ne defile pas, donc Safari ne peut plus deployer ni
+   * replier sa barre d'outils — c'est ce va-et-vient qui changeait `dvh` et
+   * faisait sauter toute la colonne de 10 a 25 px en plein geste.
+   * On pose une classe (et non un style inline) : le verrou de la fiche
+   * produit sauvegarde/restaure `body.style.overflow` et ecraserait un inline.
+   */
+  useEffect(() => {
+    const portrait = mode === 'portrait';
+    const root = document.documentElement;
+    root.classList.toggle('is-portrait', portrait);
+    document.body.classList.toggle('is-portrait', portrait);
+    return () => {
+      root.classList.remove('is-portrait');
+      document.body.classList.remove('is-portrait');
+    };
+  }, [mode]);
 
   const activeIndex = categories.findIndex((c) => c.id === activeId);
   const category = useMemo(() => categories[activeIndex], [categories, activeIndex]);
@@ -57,6 +75,15 @@ const App = () => {
    * `blur(64px)` plein écran pour un seizième des pixels à tramer — ce qui
    * rend le fondu gratuit au moment précis où la carte, elle, s'anime.
    */
+  // Couches de scene : degrade + grain, chacune sur sa propre couche
+  // compositee et jamais repeinte (cf. index.css, 5.1/5.2).
+  const scene = (
+    <>
+      <div aria-hidden className="scene-bg" />
+      <div aria-hidden className="scene-grain" />
+    </>
+  );
+
   const ambient = (
     // Le cadre borne la couche agrandie : elle ne peut créer aucun
     // débordement, donc aucune barre de défilement parasite.
@@ -87,7 +114,8 @@ const App = () => {
   if (mode === 'tablet') {
     return (
       <div className="relative flex h-[100dvh] overflow-hidden">
-        {ambient}
+        {scene}
+      {ambient}
 
         <aside
           className="relative z-10 flex h-full w-[300px] shrink-0 flex-col bg-surface/70 px-6 py-8 backdrop-blur-xl"
@@ -127,7 +155,8 @@ const App = () => {
         className="relative min-h-[100dvh] overflow-y-auto"
         style={{ overflowX: 'hidden' }}
       >
-        {ambient}
+        {scene}
+      {ambient}
 
         <div
           className="relative z-10 flex min-h-[100dvh] flex-col"
@@ -160,6 +189,7 @@ const App = () => {
   // ── A — TÉLÉPHONE DEBOUT : structure inchangée, jamais de défilement ──────
   return (
     <div className="relative  h-[100dvh]  overflow-hidden">
+      {scene}
       {ambient}
 
       <div
@@ -185,10 +215,13 @@ const App = () => {
         <main className="relative flex min-h-0 flex-1 flex-col">{carousel('portrait')}</main>
 
         <footer
-          className="app-footer shrink-0 px-6 pb-3 pt-1 text-center text-[11px] uppercase tracking-[0.22em] text-muted/60"
+          className="app-footer shrink-0 px-6 pb-3 pt-1 text-center text-[clamp(9px,2.6vw,11px)] uppercase tracking-[0.12em] text-muted/60"
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
         >
-          Glissez pour parcourir · Appuyez pour les détails
+          {/* Raccourci : la version longue etait tronquee a droite des 320px.
+              `text-wrap: balance` garantit deux lignes centrees equilibrees
+              plutot qu'un mot orphelin si la police de secours est plus large. */}
+          <span className="[text-wrap:balance]">Glissez · Appuyez pour les détails</span>
         </footer>
       </div>
 

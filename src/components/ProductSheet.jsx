@@ -30,7 +30,7 @@ const ProductSheet = ({ product, onClose }) => {
             role="dialog"
             aria-modal="true"
             aria-label={product.name}
-            className="fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[88vh] w-full max-w-[480px] overflow-hidden rounded-t-4xl bg-surface ring-1 ring-white/10 will-change-transform"
+            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[88dvh] w-full max-w-[480px] flex-col overflow-hidden rounded-t-4xl bg-surface ring-1 ring-white/10 will-change-transform"
             initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
             animate={reduceMotion ? { opacity: 1 } : { y: 0 }}
             exit={reduceMotion ? { opacity: 0 } : { y: '100%' }}
@@ -44,19 +44,25 @@ const ProductSheet = ({ product, onClose }) => {
               }
             }}
           >
-            <div className="flex justify-center py-3">
+            <div className="flex shrink-0 justify-center py-3">
               <span className="h-1.5 w-11 rounded-full bg-white/20" />
             </div>
 
             <div
               // seule zone où le texte reste sélectionnable (copier un plat)
-              className="selectable max-h-[calc(88vh-40px)] overflow-y-auto overscroll-contain px-5"
-              style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
+              // Le corps prend la hauteur restante de la feuille (flex-1) au
+              // lieu d'un max-height en dur : le pied colle est donc toujours
+              // dans le cadre, quelle que soit la longueur des ingredients.
+              className="selectable min-h-0 flex-1 overflow-y-auto overscroll-contain px-5"
             >
               <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl bg-surface-2">
                 <img
                   src={product.image}
                   alt={product.name}
+                  width={800}
+                  height={600}
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover"
                   draggable={false}
                 />
@@ -112,7 +118,16 @@ const ProductSheet = ({ product, onClose }) => {
                 </div>
               )}
 
-              <p className="mt-7 rounded-2xl border border-white/8 bg-surface-2 px-4 py-3.5 text-center text-sm text-muted">
+            </div>
+
+            {/* Pied colle A L'INTERIEUR de la feuille : la mention restait
+                sinon sous la barre d'outils de Safari, voire entierement sous
+                la ligne de flottaison sur une fiche a longue liste. */}
+            <div
+              className="shrink-0 border-t border-white/8 bg-surface px-5 pt-3"
+              style={{ paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}
+            >
+              <p className="rounded-2xl border border-white/8 bg-surface-2 px-4 py-3.5 text-center text-sm text-muted">
                 Commandez ce plat auprès de votre serveur.
               </p>
             </div>

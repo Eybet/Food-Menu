@@ -30,7 +30,16 @@ const Header = ({ variant = 'bar' }) => {
 
   return (
     <header
-      className="sticky top-0 z-40  shrink-0 border-b border-white/5 bg-bg/70 px-5  backdrop-blur-xl"
+      /*
+        Pas de `backdrop-filter` ici. L'en-tete 'bar' n'existe qu'en portrait,
+        et le portrait ne defile plus (cf. App/index.css) : rien ne passe donc
+        jamais derriere lui, le flou ne montrait rien et coutait un recalcul du
+        fond a chaque fois qu'une carte bougeait dessous — l'en-tete etant
+        empile au-dessus d'elles (z-40). Fond quasi opaque a la place.
+        Les barres du mode couche et le rail de tablette gardent leur flou :
+        la, du contenu defile vraiment derriere.
+      */
+      className="sticky top-0 z-40  shrink-0 border-b border-white/5 bg-bg/95 px-5"
       style={{ paddingBlock: 'var(--header-pad)' }}
     >
       <div className="flex flex-col items-center justify-center text-center">

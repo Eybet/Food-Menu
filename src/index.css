@@ -5,10 +5,10 @@
 /* Neufreit — auto-hébergée, voir public/fonts/README.md.
    Absente du dossier ? la pile retombe sur Outfit 800. */
 @font-face {
-  font-family: 'Neufreit';
+  font-family: "Neufreit";
   src:
-    url('/fonts/Neufreit-ExtraBold.woff2') format('woff2'),
-    url('/fonts/Neufreit-ExtraBold.otf') format('opentype');
+    url("/fonts/Neufreit-ExtraBold.woff2") format("woff2"),
+    url("/fonts/Neufreit-ExtraBold.otf") format("opentype");
   font-weight: 800;
   font-style: normal;
   font-display: swap;
@@ -30,9 +30,7 @@
   @media (min-height: 900px) and (max-width: 767px) {
     :root {
       --card-h: clamp(300px, 44dvh, 480px);
-      
     }
-    
   }
 
   /* B — téléphone couché : scène en deux colonnes, carte ~300px. */
@@ -56,8 +54,24 @@
       --header-pad: clamp(10px, 1.4dvh, 18px);
       --row-margin: 0px;
       --dots-margin: clamp(12px, 2.4dvh, 28px);
-      
     }
+  }
+
+  .card {
+    border: 1px solid transparent;
+    border-radius: 24px;
+    background:
+      linear-gradient(#071522, #071522) padding-box,
+      linear-gradient(
+          180deg,
+          #008bcb 0%,
+          #0089b8 20%,
+          #2e8c99 35%,
+          #c98256 48%,
+          #e6651e 65%,
+          #e85f16 100%
+        )
+        border-box;
   }
 
   html,
@@ -67,35 +81,67 @@
     overflow-x: hidden;
   }
 
+  /* Le telephone debout ne defile pas — jamais.
+     Tant que la page pouvait defiler d'un pixel, Safari deployait et repliait
+     sa barre d'outils, ce qui change `dvh` et relayoute toute la colonne en
+     plein geste : l'en-tete et la carte sautaient de 10 a 25 px.
+     Classe posee par App (mode 'portrait'), pas un style inline : le verrou de
+     la fiche produit sauvegarde et restaure `body.style.overflow`, il ne doit
+     pas pouvoir ecraser celui-ci. */
+  html.is-portrait,
+  body.is-portrait {
+    overflow: hidden;
+    overscroll-behavior: none;
+    height: 100dvh;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
+    background-color: #0b0e12;
   }
 
   body {
     @apply font-sans text-text antialiased;
-    /* Halo d'ambiance : la bande autour de la colonne devient un parti pris,
-       plus une couture noire qui ressemble à un bug de rendu. */
-    /* Fond de scène : un grand radial décentré dans la famille sombre de
-       l'accent, pour que le haut de l'écran soit une fraction plus clair que
-       le bas. Assez présent pour que le noir plat ne soit plus mort, assez
-       discret pour ne jamais disputer la vedette à la carte. */
-    background:
-      radial-gradient(130% 90% at 32% -10%, #10222b 0%, #0c141b 42%, #0b0e12 72%)
-        fixed;
-    background-color: #0b0e12;
+    /* Le fond ne vit plus sur `body`.
+       `background-attachment: fixed` est un piege connu d'iOS Safari : un fond
+       fixe ne peut pas etre defile par le compositeur, il force donc un
+       repeint plein cadre a chaque mouvement. Le degrade est deplace sur une
+       couche `position: fixed` que le compositeur promeut et laisse ensuite
+       tranquille (voir .scene-bg / .scene-grain ci-dessous). */
+    background: none;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Grain très faible : tue le banding du dégradé sur les dalles 8 bits.
-     Statique, non composité, purement décoratif. */
-  body::before {
-    content: '';
+  /* Degrade de scene — sa propre couche compositee, jamais repeinte.
+     Remplace l'ancien `background: ... fixed` sur body (cf. 5.1). */
+  .scene-bg,
+  .scene-grain {
     position: fixed;
     inset: 0;
-    z-index: 0;
     pointer-events: none;
+    /* promue une fois pour toutes : le compositeur la garde en texture */
+    transform: translateZ(0);
+  }
+
+  .scene-bg {
+    z-index: -2;
+    background: radial-gradient(
+      130% 90% at 32% -10%,
+      #10222b 0%,
+      #0c141b 42%,
+      #0b0e12 72%
+    );
+  }
+
+  /* Grain tres faible : tue le banding du degrade sur les dalles 8 bits.
+     Couche propre + `will-change: opacity` pose une fois, statiquement (jamais
+     bascule) : la texture SVG n'est tramee qu'au premier rendu, puis reutilisee
+     telle quelle — elle ne participe plus a aucun repeint. */
+  .scene-grain {
+    z-index: -1;
     opacity: 0.035;
+    will-change: opacity;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
@@ -196,21 +242,13 @@
     filter: blur(9px);
   }
 
-  /* Cartes de fond : elles ne sont jamais lues, on épargne au navigateur
-     leur mise en page et leur peinture tant qu'elles ne remontent pas. */
-  .card-depth-2,
-  .card-depth-3 {
-    content-visibility: auto;
-    contain-intrinsic-size: var(--card-w) var(--card-h);
-  }
-
   /* Tablette : l'éventail est plus écarté, le flou peut être plus léger. */
-  .card-depth-1[data-blur-scale='0.5'] {
+  .card-depth-1[data-blur-scale="0.5"] {
     filter: blur(2.5px);
   }
 
-  .card-depth-2[data-blur-scale='0.5'],
-  .card-depth-3[data-blur-scale='0.5'] {
+  .card-depth-2[data-blur-scale="0.5"],
+  .card-depth-3[data-blur-scale="0.5"] {
     filter: blur(6px);
   }
 
@@ -307,7 +345,7 @@
   /* Éclat spéculaire — carte active uniquement, long temps mort volontaire :
      un reflet qui passe, pas un shimmer de chargement. */
   .price-pill--shine::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background: linear-gradient(
