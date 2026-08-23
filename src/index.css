@@ -30,7 +30,9 @@
   @media (min-height: 900px) and (max-width: 767px) {
     :root {
       --card-h: clamp(300px, 44dvh, 480px);
+      
     }
+    
   }
 
   /* B — téléphone couché : scène en deux colonnes, carte ~300px. */
@@ -50,10 +52,11 @@
      ne retombe ici au lieu de la disposition B. */
   @media (min-width: 768px) and (min-height: 501px) {
     :root {
-      --card-h: clamp(280px, 42dvh, 380px);
+      --card-h: clamp(320px, 82dvh, 470px);
       --header-pad: clamp(10px, 1.4dvh, 18px);
       --row-margin: 0px;
       --dots-margin: clamp(12px, 2.4dvh, 28px);
+      
     }
   }
 
@@ -72,11 +75,28 @@
     @apply font-sans text-text antialiased;
     /* Halo d'ambiance : la bande autour de la colonne devient un parti pris,
        plus une couture noire qui ressemble à un bug de rendu. */
+    /* Fond de scène : un grand radial décentré dans la famille sombre de
+       l'accent, pour que le haut de l'écran soit une fraction plus clair que
+       le bas. Assez présent pour que le noir plat ne soit plus mort, assez
+       discret pour ne jamais disputer la vedette à la carte. */
     background:
-      radial-gradient(120% 80% at 50% 0%, #17130c 0%, #0a0a0a 60%) fixed;
-    background-color: #0a0a0a;
+      radial-gradient(130% 90% at 32% -10%, #10222b 0%, #0c141b 42%, #0b0e12 72%)
+        fixed;
+    background-color: #0b0e12;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Grain très faible : tue le banding du dégradé sur les dalles 8 bits.
+     Statique, non composité, purement décoratif. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
   /* Pas de barre de défilement horizontale, jamais. */
@@ -157,6 +177,63 @@
     aspect-ratio: 13 / 18;
   }
 
+  /* ── Paliers de profondeur ────────────────────────────────────────
+     Le flou est FIXE par palier et ne change qu'au changement d'index :
+     jamais pendant le geste. `filter: blur()` interpolé image par image
+     était le premier poste de coût du swipe (recalcul GPU à chaque
+     trame, non compositable) ; en paliers, l'écart visuel est
+     imperceptible et le coût par image tombe à zéro. */
+  .card-depth-0 {
+    filter: none;
+  }
+
+  .card-depth-1 {
+    filter: blur(4px);
+  }
+
+  .card-depth-2,
+  .card-depth-3 {
+    filter: blur(9px);
+  }
+
+  /* Cartes de fond : elles ne sont jamais lues, on épargne au navigateur
+     leur mise en page et leur peinture tant qu'elles ne remontent pas. */
+  .card-depth-2,
+  .card-depth-3 {
+    content-visibility: auto;
+    contain-intrinsic-size: var(--card-w) var(--card-h);
+  }
+
+  /* Tablette : l'éventail est plus écarté, le flou peut être plus léger. */
+  .card-depth-1[data-blur-scale='0.5'] {
+    filter: blur(2.5px);
+  }
+
+  .card-depth-2[data-blur-scale='0.5'],
+  .card-depth-3[data-blur-scale='0.5'] {
+    filter: blur(6px);
+  }
+
+  /* ── Discipline will-change ───────────────────────────────────────
+     Posé uniquement sur les cartes de l'éventail, uniquement pendant le
+     geste, retiré dès qu'il se repose. Jamais sur le conteneur. */
+  .card-stack.is-dragging > .card-depth {
+    will-change: transform;
+  }
+
+  /* Pendant le geste, on ne peint que |offset| <= 2. Le 3e rang réapparaît
+     une fois la carte reposée. `visibility` n'entraîne ni layout ni
+     recalcul de style sur un élément déjà positionné en absolu — au
+     contraire d'un démontage, qui aurait coûté un rendu React en plein
+     début de geste. */
+  .card-stack.is-dragging > .card-depth-3 {
+    visibility: hidden;
+  }
+
+  .card-depth-3 {
+    transition: visibility 0s linear 0.18s;
+  }
+
   /* Scrim de lisibilité de la carte */
   .card-scrim {
     background: linear-gradient(
@@ -199,19 +276,21 @@
   /* ── Pastille de prix ─────────────────────────────────────────── */
   .price-pill {
     @apply relative inline-flex items-baseline gap-1 overflow-hidden rounded-full px-3.5 py-1.5;
-    background: linear-gradient(145deg, #ffe9a8 0%, #f5c542 45%, #d99e1f 100%);
+    /* Même traitement physique qu'avant — biseau, ombre interne, arête,
+       halo — entièrement re-dérivé de l'accent cyan. */
+    background: linear-gradient(145deg, #7fe3f2 0%, #22b8cf 45%, #0e7f96 100%);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.6),
-      inset 0 -1px 2px rgba(120, 70, 0, 0.35),
+      inset 0 -1px 2px rgba(0, 48, 60, 0.4),
       0 0 0 1px rgba(255, 255, 255, 0.14),
-      0 4px 16px rgba(212, 160, 23, 0.38);
+      0 4px 16px rgba(14, 127, 150, 0.42);
   }
 
   .price-pill__amount {
     @apply font-num;
     font-weight: 700;
     font-size: 16px;
-    color: #1a1206;
+    color: #04141a;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
   }
@@ -220,7 +299,7 @@
     @apply font-num;
     font-size: 0.7em;
     font-weight: 500;
-    color: #1a1206;
+    color: #04141a;
     opacity: 0.72;
     letter-spacing: 0.01em;
   }

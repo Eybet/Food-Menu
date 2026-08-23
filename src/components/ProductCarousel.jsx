@@ -39,6 +39,11 @@ const ProductCarousel = forwardRef((
     [onActiveChange, products],
   );
 
+  // La carte est dimensionnée en dvh par le CSS : on la mesure pour que les
+  // décalages du fan restent une fraction de la carte, à toutes les tailles.
+  const stackRef = useRef(null);
+  const [cardSize, setCardSize] = useState({ w: 260, h: 360 });
+
   const { index, setIndex, reset, dragProgress, onPan, onPanEnd, reduceMotion } =
     useSwipe(products.length, {
       onOverflowNext: onNextCategory,
@@ -48,10 +53,29 @@ const ProductCarousel = forwardRef((
 
   useImperativeHandle(ref, () => ({ reset }), [reset]);
 
-  // La carte est dimensionnée en dvh par le CSS : on la mesure pour que les
-  // décalages du fan restent une fraction de la carte, à toutes les tailles.
-  const stackRef = useRef(null);
-  const [cardSize, setCardSize] = useState({ w: 260, h: 360 });
+  /**
+   * Discipline `will-change` — pilotée en impératif, jamais par un état React.
+   * `will-change: transform` n'est posé sur les cartes de l'éventail que
+   * pendant le geste, et retiré dès qu'il se repose : le laisser en permanence
+   * consomme de la mémoire GPU et provoque lui-même des à-coups. Passer par
+   * `useState` aurait déclenché un rendu au tout début du geste — précisément
+   * l'instant où il ne faut pas en faire. On bascule donc une classe sur la
+   * pile, qui ne cible que ses enfants (jamais le conteneur lui-même).
+   */
+  const setDragging = useCallback((on) => {
+    const el = stackRef.current;
+    if (el) el.classList.toggle('is-dragging', on);
+  }, []);
+
+  const handlePanStart = useCallback(() => setDragging(true), [setDragging]);
+  const handlePan = useCallback((e, info) => onPan(e, info), [onPan]);
+  const handlePanEnd = useCallback(
+    (e, info) => {
+      setDragging(false);
+      onPanEnd(e, info);
+    },
+    [setDragging, onPanEnd],
+  );
 
   useEffect(() => {
     const el = stackRef.current;
@@ -92,8 +116,9 @@ const ProductCarousel = forwardRef((
       className={`carousel relative w-full select-none overflow-hidden touch-pan-y ${
         split || tablet ? 'h-full' : 'flex-1'
       }`}
-      onPan={onPan}
-      onPanEnd={onPanEnd}
+      onPanStart={handlePanStart}
+      onPan={handlePan}
+      onPanEnd={handlePanEnd}
       onDragStart={(e) => e.preventDefault()}
       style={{ perspective: 1200 }}
     >
@@ -134,11 +159,11 @@ const ProductCarousel = forwardRef((
       {split ? (
         // Téléphone couché : le texte sort de la carte et se pose à côté,
         // il ne peut donc jamais être rogné par la photo.
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 ">
           {/* hauteur explicite : les cartes sont en position absolue, sans elle
               la colonne s'effondrerait à 0 dans un conteneur centré */}
           <div
-            className="shrink-0 basis-[46%]"
+            className="shrink-0 basis-[50%] "
             style={{ height: 'calc(var(--card-h) + 24px)' }}
           >
             {fan}

@@ -26,8 +26,14 @@ const FAN = {
   Y_RATIO: 0.028, // × hauteur de carte, par cran (≈10px sur une carte de 360)
   SCALE: 0.07, // perte d'échelle par cran
   OPACITY: 0.34, // perte d'opacité par cran
-  BLUR: 2.5, // px de flou par cran
-  BLUR_MAX: 6,
+  /**
+   * Flou de profondeur — PALIERS FIXES, jamais continus.
+   * `filter: blur()` est recalculé par le GPU à chaque image et ne peut pas
+   * être composité à moindre coût : l'animer pendant le drag divisait la
+   * fréquence d'images par deux sur un Android milieu de gamme. Le palier ne
+   * change donc qu'au changement d'index (via une classe CSS statique), jamais
+   * pendant le geste. L'écart visuel est invisible, l'écart de coût est énorme.
+   */
   SCRIM: 0.22, // voile sombre par cran sur les cartes non actives
   TEXT_FADE: 1.6, // au-delà de |progress| = 1.6, le texte disparaît
   VISIBLE: 3, // |offset| max monté dans le DOM

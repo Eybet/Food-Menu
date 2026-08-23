@@ -48,26 +48,37 @@ const App = () => {
     />
   );
 
-  // Voile photo du plat actif, derrière toute la page — fondu enchaîné.
+  /**
+   * Voile photo du plat actif, derrière toute la page — fondu enchaîné.
+   *
+   * Le flou est STATIQUE : seule l'opacité est animée, jamais le `filter`.
+   * La couche est en outre rendue au quart de la surface puis agrandie ×4 :
+   * un `blur(16px)` sur un quart d'écran donne le même résultat qu'un
+   * `blur(64px)` plein écran pour un seizième des pixels à tramer — ce qui
+   * rend le fondu gratuit au moment précis où la carte, elle, s'anime.
+   */
   const ambient = (
-    <AnimatePresence mode="popLayout">
-      {activeProduct?.image && (
-        <motion.div
-          key={activeProduct.id}
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `url(${activeProduct.image})`,
-            filter: 'blur(64px) saturate(1.2)',
-            transform: 'scale(1.15)',
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.08 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.6 }}
-        />
-      )}
-    </AnimatePresence>
+    // Le cadre borne la couche agrandie : elle ne peut créer aucun
+    // débordement, donc aucune barre de défilement parasite.
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <AnimatePresence mode="popLayout">
+        {activeProduct?.image && (
+          <motion.div
+            key={activeProduct.id}
+            className="absolute left-0 top-0 h-1/4 w-1/4 origin-top-left bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${activeProduct.image})`,
+              filter: 'blur(16px) saturate(1.15)',
+              transform: 'scale(4) translateZ(0)',
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
   );
 
   const sheet = <ProductSheet product={selected} onClose={() => setSelected(null)} />;

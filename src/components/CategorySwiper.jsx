@@ -61,7 +61,7 @@ const CategorySwiper = ({ categories, activeId, onSelect, variant = 'row' }) => 
               onClick={() => onSelect(c.id)}
               aria-current={active ? 'true' : undefined}
               className={`category-pill relative flex h-12 items-center gap-3 rounded-xl px-3 font-display text-[15px] ${
-                active ? 'text-bg' : 'text-muted'
+                active ? 'text-accent-fg' : 'text-muted'
               }`}
             >
               {active && (
@@ -101,7 +101,7 @@ const CategorySwiper = ({ categories, activeId, onSelect, variant = 'row' }) => 
             onClick={() => onSelect(c.id)}
             aria-current={active ? 'true' : undefined}
             className={`category-pill relative shrink-0 rounded-full px-4 py-2.5 font-display text-sm [scroll-snap-align:center] ${
-              active ? 'text-bg' : 'text-muted'
+              active ? 'text-accent-fg' : 'text-muted'
             }`}
             style={{
               minHeight: 44,

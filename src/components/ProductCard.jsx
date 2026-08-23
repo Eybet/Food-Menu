@@ -7,9 +7,29 @@ import Numerals from './Numerals';
 const badgeTone = (label) => {
   const l = label.toLowerCase();
   if (l.includes('épic')) return 'bg-danger/20 text-danger border-danger/30';
-  if (l.includes('nouveau')) return 'bg-accent/20 text-accent border-accent/30';
+  if (l.includes('nouveau')) return 'bg-support/20 text-support border-support/40';
   return 'bg-white/10 text-text/80 border-white/15';
 };
+
+/**
+ * Palier de profondeur — se déduit du seul `offset`, qui ne bouge qu'au
+ * changement d'index. Porte le flou FIXE, le rang de pile et
+ * `content-visibility` via une classe CSS statique : rien de tout cela n'est
+ * recalculé pendant le geste.
+ *
+ * Les chaînes sont littérales et jamais interpolées : Tailwind élague
+ * `@layer components` sur les classes qu'il retrouve telles quelles dans les
+ * sources, et une classe fabriquée en `card-depth-${d}` disparaissait
+ * silencieusement du CSS de production — le flou ne sortait qu'en dev.
+ */
+const DEPTH_CLASS = [
+  'card-depth card-depth-0',
+  'card-depth card-depth-1',
+  'card-depth card-depth-2',
+  'card-depth card-depth-3',
+];
+
+const depthClass = (offset) => DEPTH_CLASS[Math.min(Math.abs(offset), 3)];
 
 const ProductCardBase = ({
   product,
@@ -36,11 +56,10 @@ const ProductCardBase = ({
   const opacity = useTransform(progress, (p) =>
     Math.max(1 - Math.abs(p) * FAN.OPACITY, 0),
   );
-  const zIndex = useTransform(progress, (p) => 100 - Math.round(Math.abs(p) * 10));
-  const filter = useTransform(progress, (p) => {
-    const b = Math.min(Math.abs(p) * FAN.BLUR * blurScale, FAN.BLUR_MAX);
-    return b < 0.15 ? 'none' : `blur(${b.toFixed(2)}px)`;
-  });
+  // z-index : statique, dérivé de l'offset. Animé en motion value il était
+  // réécrit à chaque image alors que ce n'est pas une propriété compositable —
+  // chaque écriture forçait un nouveau tri de pile.
+  const zIndex = 100 - Math.min(Math.abs(offset), 3) * 10;
   // Voile sombre : enfonce les cartes arrière dans la profondeur.
   const scrim = useTransform(progress, (p) =>
     Math.min(Math.abs(p) * FAN.SCRIM, 0.66),
@@ -58,7 +77,8 @@ const ProductCardBase = ({
     <motion.article
       // inset-0 dans une pile 260×360 déjà centrée → toutes les cartes
       // partagent exactement la même origine, aucun décalage depuis la gauche.
-      className="absolute inset-0 will-change-transform"
+      className={`absolute inset-0 ${depthClass(offset)}`}
+      data-blur-scale={blurScale}
       style={{
         rotate: reduceMotion ? 0 : rotate,
         x: reduceMotion ? 0 : x,
@@ -66,7 +86,6 @@ const ProductCardBase = ({
         scale,
         opacity,
         zIndex,
-        filter: isActive ? 'none' : filter,
         transformOrigin: FAN.ORIGIN,
         pointerEvents: isActive ? 'auto' : 'none',
       }}
@@ -78,7 +97,7 @@ const ProductCardBase = ({
         values du fan appliquées ci-dessus.
       */}
       <motion.div
-        className="h-full w-full will-change-transform"
+        className="h-full w-full "
         initial={reduceMotion ? false : { scale: 0.72, opacity: 0, y: 48 }}
         animate={{
           scale: 1,
@@ -105,13 +124,15 @@ const ProductCardBase = ({
           }`}
         >
           {/* conteneur à ratio fixe → aucun décalage au chargement */}
-          <div className="absolute inset-0 bg-surface-2">
+          <div className="absolute inset-0 bg-surface-2 ">
             {!loaded && (
               <div className="absolute inset-0 animate-shimmer bg-[linear-gradient(100deg,transparent_20%,rgba(255,255,255,0.06)_40%,transparent_60%)] bg-[length:200%_100%]" />
             )}
             <img
               src={product.image}
               alt={product.name}
+              width={520}
+              height={720}
               loading="lazy"
               decoding="async"
               draggable={false}
@@ -123,7 +144,7 @@ const ProductCardBase = ({
           </div>
 
           {/* scrim de lisibilité */}
-          <div className="card-scrim absolute inset-0" />
+          <div className="card-scrim absolute inset-0 " />
 
           {/* badges — repris par ProductInfo en disposition B */}
           <div
@@ -138,7 +159,7 @@ const ProductCardBase = ({
             {(product.badges || []).map((b) => (
               <span
                 key={b}
-                className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest backdrop-blur-sm ${badgeTone(b)}`}
+                className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest ${badgeTone(b)}`}
               >
                 {b}
               </span>
@@ -189,7 +210,26 @@ const ProductCardBase = ({
   );
 };
 
-// Mémoïsé : un drag ne re-render aucune carte (tout passe par les motion values).
-const ProductCard = memo(ProductCardBase);
+/**
+ * Mémoïsé : un drag ne re-render aucune carte — tout passe par les motion
+ * values. `dragProgress` est une motion value stable (identité constante), on
+ * la compare donc par référence ; l'identité d'une carte ne change pas en
+ * cours de geste. Seuls `offset`/`isActive` (qui ne bougent qu'au changement
+ * d'index) et la géométrie peuvent provoquer un rendu.
+ */
+const areEqual = (a, b) =>
+  a.product === b.product &&
+  a.offset === b.offset &&
+  a.isActive === b.isActive &&
+  a.showText === b.showText &&
+  a.reduceMotion === b.reduceMotion &&
+  a.xRatio === b.xRatio &&
+  a.blurScale === b.blurScale &&
+  a.cardSize.w === b.cardSize.w &&
+  a.cardSize.h === b.cardSize.h &&
+  a.dragProgress === b.dragProgress &&
+  a.onOpen === b.onOpen;
+
+const ProductCard = memo(ProductCardBase, areEqual);
 
 export default ProductCard;
