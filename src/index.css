@@ -1,0 +1,303 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Neufreit — auto-hébergée, voir public/fonts/README.md.
+   Absente du dossier ? la pile retombe sur Outfit 800. */
+@font-face {
+  font-family: 'Neufreit';
+  src:
+    url('/fonts/Neufreit-ExtraBold.woff2') format('woff2'),
+    url('/fonts/Neufreit-ExtraBold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  /* ── Échelle pilotée par la hauteur du viewport ──────────────────
+     Toute la mise en page se dérive de --card-h : téléphone couché,
+     petit écran ou iPad, rien n'est figé en pixels. */
+  :root {
+    --card-h: clamp(200px, 56dvh, 380px);
+    --card-w: calc(var(--card-h) * 13 / 18);
+    --header-pad: clamp(6px, 1.6dvh, 14px);
+    --row-margin: clamp(6px, 1.4dvh, 16px);
+    --dots-margin: clamp(8px, 2dvh, 20px);
+  }
+
+  /* A — téléphone debout très haut : la carte prend la place disponible. */
+  @media (min-height: 900px) and (max-width: 767px) {
+    :root {
+      --card-h: clamp(300px, 44dvh, 480px);
+    }
+  }
+
+  /* B — téléphone couché : scène en deux colonnes, carte ~300px. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    :root {
+      /* 62dvh : la rangée de points reste au-dessus de la ligne de flottaison
+         (à 66dvh elle passait 11px en dessous sur un écran de 390px) */
+      --card-h: clamp(200px, 62dvh, 290px);
+      --header-pad: 4px;
+      --row-margin: 4px;
+      --dots-margin: 8px;
+    }
+  }
+
+  /* C — tablette : la carte garde exactement sa taille téléphone (max 380).
+     La borne de hauteur évite qu'un téléphone couché (large mais court)
+     ne retombe ici au lieu de la disposition B. */
+  @media (min-width: 768px) and (min-height: 501px) {
+    :root {
+      --card-h: clamp(280px, 42dvh, 380px);
+      --header-pad: clamp(10px, 1.4dvh, 18px);
+      --row-margin: 0px;
+      --dots-margin: clamp(12px, 2.4dvh, 28px);
+    }
+  }
+
+  html,
+  body {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply font-sans text-text antialiased;
+    /* Halo d'ambiance : la bande autour de la colonne devient un parti pris,
+       plus une couture noire qui ressemble à un bug de rendu. */
+    background:
+      radial-gradient(120% 80% at 50% 0%, #17130c 0%, #0a0a0a 60%) fixed;
+    background-color: #0a0a0a;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Pas de barre de défilement horizontale, jamais. */
+  #root {
+    overflow-x: hidden;
+  }
+
+  button {
+    touch-action: manipulation;
+  }
+
+  /* ── Aucune sélection native sur les surfaces qu'on fait glisser ──────
+     Sans ça, iOS Safari interprète un swipe sur les pastilles comme une
+     sélection de texte : le mot part en blanc sur bleu et le surlignage
+     persiste ensuite d'un rendu à l'autre. */
+  .card,
+  .card *,
+  .category-pill,
+  .category-row,
+  .carousel,
+  .carousel *,
+  .price-pill,
+  .dots,
+  .dots * {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Seule exception : la fiche produit, où copier un nom de plat est légitime. */
+  .selectable,
+  .selectable * {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
+  /* Neufreit ne livre que l'ExtraBold : le poids est verrouillé ici pour qu'aucun
+     font-bold/black ne vienne déclencher un gras synthétique. */
+  .font-display {
+    font-weight: 800;
+  }
+
+  img {
+    -webkit-user-drag: none;
+  }
+}
+
+@layer components {
+  /* Rangée de catégories : les libellés se dissolvent aux deux bords au lieu
+     d'être tranchés, ce qui signale aussi que la rangée défile. */
+  .category-row {
+    scroll-padding-inline: 20px;
+    /* Une chiquenaude horizontale dans la rangée ne peut jamais se propager
+       à la page : plus de vide à droite ni d'en-tête qui sort du cadre. */
+    overscroll-behavior-x: contain;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 20px,
+      #000 calc(100% - 20px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 20px,
+      #000 calc(100% - 20px),
+      transparent 100%
+    );
+  }
+
+  /* ── Pile de cartes ───────────────────────────────────────────── */
+  .card-stack {
+    height: var(--card-h);
+    width: var(--card-w);
+    aspect-ratio: 13 / 18;
+  }
+
+  /* Scrim de lisibilité de la carte */
+  .card-scrim {
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.92) 0%,
+      rgba(0, 0, 0, 0.55) 38%,
+      transparent 72%
+    );
+  }
+
+  .card-title {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  }
+
+  .card-desc {
+    color: rgba(255, 255, 255, 0.82);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  }
+
+  /* Le CTA cède la place au prix ; il est masqué en JS sous 210px de carte. */
+  .card-cta {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  /* Baseline trop haute pour la tagline : le nom seul porte l'en-tête. */
+  @media (max-height: 420px) {
+    .header-tagline {
+      display: none;
+    }
+  }
+
+  /* Écran couché : le pied de page rendrait la carte trop petite. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .app-footer {
+      display: none;
+    }
+  }
+
+  /* ── Pastille de prix ─────────────────────────────────────────── */
+  .price-pill {
+    @apply relative inline-flex items-baseline gap-1 overflow-hidden rounded-full px-3.5 py-1.5;
+    background: linear-gradient(145deg, #ffe9a8 0%, #f5c542 45%, #d99e1f 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 2px rgba(120, 70, 0, 0.35),
+      0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 4px 16px rgba(212, 160, 23, 0.38);
+  }
+
+  .price-pill__amount {
+    @apply font-num;
+    font-weight: 700;
+    font-size: 16px;
+    color: #1a1206;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  .price-pill__currency {
+    @apply font-num;
+    font-size: 0.7em;
+    font-weight: 500;
+    color: #1a1206;
+    opacity: 0.72;
+    letter-spacing: 0.01em;
+  }
+
+  /* Éclat spéculaire — carte active uniquement, long temps mort volontaire :
+     un reflet qui passe, pas un shimmer de chargement. */
+  .price-pill--shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.65) 50%,
+      transparent 65%
+    );
+    transform: translateX(-150%);
+    animation: shine 3.6s ease-in-out infinite;
+  }
+
+  @keyframes shine {
+    0%,
+    65% {
+      transform: translateX(-150%);
+    }
+    100% {
+      transform: translateX(150%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .price-pill--shine::after {
+      display: none;
+    }
+  }
+
+  /* Épuisé : surface plate, texte éteint, ni halo ni reflet. */
+  .price-pill--sold {
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .price-pill--sold .price-pill__amount,
+  .price-pill--sold .price-pill__currency {
+    @apply text-muted;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+  .animate-shimmer {
+    animation: shimmer 1.6s linear infinite;
+  }
+}
+
+/* Accessibilité : on coupe tout mouvement décoratif. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
